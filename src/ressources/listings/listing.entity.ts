@@ -1,5 +1,12 @@
-import { Entity, Column, ManyToOne, OneToMany } from 'typeorm';
-import { GenericEntity } from '../../common/generic.entity';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  JoinColumn,
+} from 'typeorm';
+
 import { User } from '../users/user.entity';
 import { ListingImage } from '../listing-images/listing-image.entity';
 import { Favorite } from '../listing-images/favorites/favorite.entity';
@@ -17,16 +24,31 @@ export enum ListingStatus {
   RENTED = 'rented',
 }
 
-@Entity()
-export class Listing extends GenericEntity {
+@Entity({ name: 'listing' })
+export class Listing {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'timestamp', default: () => 'NOW()' })
+  created_at: Date;
+
+  @Column({ type: 'timestamp', default: () => 'NOW()', nullable: true })
+  updated_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date;
+
+  @Column({ default: false })
+  is_active: boolean;
+
   @Column()
   title: string;
 
   @Column({ type: 'text' })
   description: string;
 
-  @Column('numeric')
-  price: number;
+  @Column({ type: 'numeric', precision: 12, scale: 2 })
+  price: string;
 
   @Column({ default: 'XAF' })
   currency: string;
@@ -37,21 +59,36 @@ export class Listing extends GenericEntity {
   @Column()
   district: string;
 
-  @Column({ type: 'enum', enum: ListingType })
+  @Column({
+    type: 'enum',
+    enum: ListingType,
+  })
   type: ListingType;
 
-  @Column({ type: 'enum', enum: ListingStatus, default: ListingStatus.AVAILABLE })
+  @Column({
+    type: 'enum',
+    enum: ListingStatus,
+    default: ListingStatus.AVAILABLE,
+  })
   status: ListingStatus;
 
-  @ManyToOne(() => User, user => user.listings, { nullable: true })
-  owner: User | null;
+  @Column({ type: 'uuid', nullable: true })
+  ownerId: string;
 
-  @OneToMany(() => ListingImage, image => image.listing)
+  @ManyToOne(() => User, (user) => user.listings, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'ownerId' })
+  owner: User;
+
+  @OneToMany(() => ListingImage, (image) => image.listing, {
+    cascade: true,
+  })
   images: ListingImage[];
 
-  @OneToMany(() => Favorite, favorite => favorite.listing)
+  @OneToMany(() => Favorite, (favorite) => favorite.listing)
   favorites: Favorite[];
 
-  @OneToMany(() => ContactRequest, cr => cr.listing)
+  @OneToMany(() => ContactRequest, (cr) => cr.listing)
   contactRequests: ContactRequest[];
 }

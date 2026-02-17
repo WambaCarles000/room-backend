@@ -27,6 +27,6 @@ export const AppDataSource = new DataSource({
   migrations: [
     path.join(__dirname, '/../database/migrations/*{.ts,.js}')
   ],
-  synchronize: process.env.NODE_ENV === 'development' ? true : false,
+  synchronize: false, // Désactivation de la synchronisation automatique
   logging: process.env.NODE_ENV === 'development',
 });

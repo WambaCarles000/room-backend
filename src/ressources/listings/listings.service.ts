@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { AppDataSource } from '../../database/data-source';
 import { Listing, ListingStatus, ListingType } from './listing.entity';
 import { CreateListingDto } from './dto/create-listing.dto';
-import { User } from '../users/user.entity';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
@@ -25,7 +24,7 @@ export class ListingsService {
     const listing = this.repo.create({
       title: dto.title,
       description: dto.description,
-      price: dto.price,
+      price: dto.price.toString(), // Conversion en chaîne de caractères
       currency: dto.currency ?? 'XAF',
       city: dto.city,
       district: dto.district,

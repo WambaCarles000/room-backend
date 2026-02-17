@@ -8,13 +8,12 @@ import { User } from '../../auth/user.decorator';
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
 
-  // Liste des logements (publique)
+
   @Get()
   findAll() {
     return this.listingsService.findAll();
   }
 
-  // Création d'un logement (protégé par Supabase)
   @Post()
   @UseGuards(SupabaseAuthGuard)
   create(@Body() dto: CreateListingDto, @User() user: any) {

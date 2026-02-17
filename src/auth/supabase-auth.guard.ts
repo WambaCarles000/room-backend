@@ -61,7 +61,7 @@ export class SupabaseAuthGuard implements CanActivate {
 
       return true;
     } catch (error) {
-      // Log l'erreur en dev pour debug
+      
       if (process.env.NODE_ENV === 'development') {
         console.error('JWT verification error:', error.message);
         console.error('JWKS URL:', this.jwksUrl);

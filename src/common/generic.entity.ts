@@ -2,13 +2,12 @@ import {
   Column,
   CreateDateColumn,
   DeleteDateColumn,
-  PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
 
 export class GenericEntity {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
+  @Column("uuid", { default: () => "uuid_generate_v4()" })
+  uuid: string;
 
   @CreateDateColumn()
   created_at: Date;
@@ -27,4 +26,3 @@ export class GenericEntity {
   @Column({ default: false })
   is_active: boolean;
 }
-  
