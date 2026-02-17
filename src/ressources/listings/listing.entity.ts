@@ -22,6 +22,7 @@ export enum ListingStatus {
   AVAILABLE = 'available',
   SOLD = 'sold',
   RENTED = 'rented',
+  TAKEN = 'taken',
 }
 
 @Entity({ name: 'listing' })
@@ -71,6 +72,15 @@ export class Listing {
     default: ListingStatus.AVAILABLE,
   })
   status: ListingStatus;
+
+  @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
+  square_meters: string;
+
+  @Column({ type: 'int', nullable: true })
+  deposit_months: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  availability_date: Date;
 
   @Column({ type: 'uuid', nullable: true })
   ownerId: string;
