@@ -24,14 +24,13 @@ export class UsersController {
   @Patch('me')
   @UseGuards(SupabaseAuthGuard)
   async updateMe(@Body() dto: UpdateProfileDto, @Request() req: any) {
-    const payloadUser = req.user;
-    const user = await this.usersService.findOrCreateFromSupabase(payloadUser);
+    // 'req.user' is already a User object from the database (attached by SupabaseAuthGuard)
+    const user = req.user;
 
     // Only admins can set role to admin
     if (dto.role && dto.role === 'admin') {
-      // check if requester is admin in our DB
-      const requester = await this.usersService.findOrCreateFromSupabase(payloadUser);
-      if (requester.role !== 'admin') {
+      // Check if requester is admin in our DB
+      if (user.role !== 'admin') {
         throw new ForbiddenException('Only admin can assign admin role');
       }
     }

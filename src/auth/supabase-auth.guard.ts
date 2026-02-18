@@ -6,17 +6,9 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { User } from '../ressources/users/user.entity';
+import { AppDataSource } from '../database/data-source';
 
-/**
- * Guard Nest qui vérifie un JWT Supabase envoyé par le frontend.
- *
- * Supabase utilise ES256 (Elliptic Curve) pour signer les tokens,
- * donc on doit utiliser la clé publique JWKS depuis Supabase.
- *
- * - Le frontend envoie le token dans l'en-tête:
- *     Authorization: Bearer <access_token>
- * - Le backend vérifie la signature avec la clé publique JWKS de Supabase
- */
 @Injectable()
 export class SupabaseAuthGuard implements CanActivate {
   private jwksUrl: string;
@@ -27,13 +19,9 @@ export class SupabaseAuthGuard implements CanActivate {
     if (!supabaseUrl) {
       throw new Error('SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL must be set');
     }
-    
-    // Construire l'URL JWKS depuis l'URL Supabase
-    // Format officiel Supabase: https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json
+
     const baseUrl = supabaseUrl.replace(/\/$/, '');
     this.jwksUrl = `${baseUrl}/auth/v1/.well-known/jwks.json`;
-    
-    // Créer le JWKS Set pour récupérer automatiquement les clés publiques
     this.jwks = createRemoteJWKSet(new URL(this.jwksUrl));
   }
 
@@ -51,17 +39,27 @@ export class SupabaseAuthGuard implements CanActivate {
     }
 
     try {
-      // Vérifier le token avec la clé publique JWKS de Supabase
       const { payload } = await jwtVerify(token, this.jwks, {
-        algorithms: ['ES256'], // Supabase utilise ES256
+        algorithms: ['ES256'],
       });
 
-      // On attache le payload au request pour l'utiliser dans les handlers.
-      (request as any).user = payload;
+      const usersRepository = AppDataSource.getRepository(User);
+      const supabaseId = payload.sub;
 
+      // Find user - must exist (created via /users/sync endpoint)
+      const dbUser = await usersRepository.findOne({
+        where: { supabase_id: supabaseId },
+      });
+
+      if (!dbUser) {
+        throw new UnauthorizedException(
+          'User not found. Please sync your profile first by calling /users/sync endpoint after signup.',
+        );
+      }
+
+      (request as any).user = dbUser;
       return true;
     } catch (error) {
-      
       if (process.env.NODE_ENV === 'development') {
         console.error('JWT verification error:', error.message);
         console.error('JWKS URL:', this.jwksUrl);
@@ -70,4 +68,3 @@ export class SupabaseAuthGuard implements CanActivate {
     }
   }
 }
-

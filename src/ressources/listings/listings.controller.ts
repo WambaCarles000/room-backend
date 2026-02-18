@@ -6,6 +6,7 @@ import { CreateShareDto } from './dto/create-share.dto';
 import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { User } from '../../auth/user.decorator';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
 
 @Controller('listings')
 export class ListingsController {
@@ -17,6 +18,12 @@ export class ListingsController {
   @Get()
   findAll() {
     return this.listingsService.findAll();
+  }
+
+  @Get('user')
+  @UseGuards(SupabaseAuthGuard)
+  getUserListings(@User() user: any) {
+    return this.listingsService.findUserListings(user.id);
   }
 
   @Post()
@@ -33,6 +40,16 @@ export class ListingsController {
     @User() user: any,
   ) {
     return this.listingsService.updateStatus(id, dto, user);
+  }
+
+  @Patch(':id')
+  @UseGuards(SupabaseAuthGuard)
+  async updateListing(
+    @Param('id') id: string,
+    @Body() dto: UpdateListingDto,
+    @User() user: any,
+  ) {
+    return this.listingsService.updateListing(id, dto, user);
   }
 
   @Get(':id/share-data/:platform')

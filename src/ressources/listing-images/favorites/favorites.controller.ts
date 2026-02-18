@@ -13,31 +13,30 @@ export class FavoritesController {
   @Post(':listingId')
   @UseGuards(SupabaseAuthGuard)
   async addFavorite(@Param('listingId') listingId: string, @Request() req: any) {
-    // Récupérer / créer l'utilisateur TypeORM depuis le payload Supabase
-    const user = await this.usersService.findOrCreateFromSupabase(req.user);
-    return this.favoritesService.addFavorite(user.id, listingId);
+    // 'req.user' is already a User object from the database (attached by SupabaseAuthGuard)
+    return this.favoritesService.addFavorite(req.user.id, listingId);
   }
 
   @Delete(':listingId')
   @UseGuards(SupabaseAuthGuard)
   async removeFavorite(@Param('listingId') listingId: string, @Request() req: any) {
-    const user = await this.usersService.findOrCreateFromSupabase(req.user);
-    await this.favoritesService.removeFavorite(user.id, listingId);
+    // 'req.user' is already a User object from the database (attached by SupabaseAuthGuard)
+    await this.favoritesService.removeFavorite(req.user.id, listingId);
     return { message: 'Favori supprimé avec succès' };
   }
 
   @Get()
   @UseGuards(SupabaseAuthGuard)
   async getUserFavorites(@Request() req: any) {
-    const user = await this.usersService.findOrCreateFromSupabase(req.user);
-    return this.favoritesService.getUserFavorites(user.id);
+    // 'req.user' is already a User object from the database (attached by SupabaseAuthGuard)
+    return this.favoritesService.getUserFavorites(req.user.id);
   }
 
   @Get('check/:listingId')
   @UseGuards(SupabaseAuthGuard)
   async checkFavorite(@Param('listingId') listingId: string, @Request() req: any) {
-    const user = await this.usersService.findOrCreateFromSupabase(req.user);
-    const isFavorite = await this.favoritesService.isFavorite(user.id, listingId);
+    // 'req.user' is already a User object from the database (attached by SupabaseAuthGuard)
+    const isFavorite = await this.favoritesService.isFavorite(req.user.id, listingId);
     return { isFavorite };
   }
 

@@ -12,7 +12,7 @@ export class UsersService {
    */
   async findOrCreateFromSupabase(payload: any): Promise<User> {
     const supabaseId = payload.sub; // ID Supabase
-    const email = payload.email || payload.user_email || null;
+    const email = payload.email || payload.user_email;
 
     // Chercher l'utilisateur existant
     let user = await this.repo.findOne({
@@ -42,20 +42,28 @@ export class UsersService {
 
   async syncFromSupabase(payload: any, dto: any): Promise<User> {
     const supabaseId = payload.sub;
+    console.log('[syncFromSupabase] Starting sync for supabaseId:', supabaseId);
+    
     let user = await this.repo.findOne({ where: { supabase_id: supabaseId } });
+    
     if (!user) {
+      console.log('[syncFromSupabase] User not found, creating new user...');
       user = this.repo.create({
         supabase_id: supabaseId,
-        email: payload.email || payload.user_email || null,
+        email: payload.email || payload.user_email,
         role: dto?.role ?? UserRole.TENANT,
-        first_name: dto?.first_name ?? null,
-        last_name: dto?.last_name ?? null,
-        phone: dto?.phone ?? null,
+        first_name: dto?.first_name,
+        last_name: dto?.last_name,
+        phone: dto?.phone,
         is_active: true,
       });
-      return this.repo.save(user);
+      console.log('[syncFromSupabase] User object created:', { supabase_id: user.supabase_id, email: user.email });
+      user = await this.repo.save(user);
+      console.log('[syncFromSupabase] User saved to DB:', user.id);
+      return user;
     }
 
+    console.log('[syncFromSupabase] User found, checking for updates...');
     // Update fields if provided
     let changed = false;
     if (dto?.first_name && user.first_name !== dto.first_name) {
@@ -73,7 +81,11 @@ export class UsersService {
     }
 
     if (changed) {
+      console.log('[syncFromSupabase] User updated, saving...');
       user = await this.repo.save(user);
+      console.log('[syncFromSupabase] User saved:', user.id);
+    } else {
+      console.log('[syncFromSupabase] No changes detected');
     }
 
     return user;
