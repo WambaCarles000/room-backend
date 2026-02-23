@@ -1,15 +1,16 @@
 import { Controller, Post, Patch, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
-import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
+import { SupabaseAuthGuard } from 'src/auth/supabase-auth.guard';
 import { UsersService } from './users.service';
 import { SyncUserDto } from './dto/sync-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { SupabaseAuthGuardForSignup } from 'src/auth/supabase-auth.guard-signup';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post('sync')
-  @UseGuards(SupabaseAuthGuard)
+  @UseGuards(SupabaseAuthGuardForSignup)
   async syncUser(@Body() dto: SyncUserDto, @Request() req: any) {
     console.log('POST /users/sync called with:', {
       payload_sub: req.user?.sub,

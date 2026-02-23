@@ -21,6 +21,10 @@ export class ListingsService {
 
   async create(dto: CreateListingDto, owner: any) {
     // 'owner' is already a User object from the database (passed by SupabaseAuthGuard via @User() decorator)
+    if (!owner?.id) {
+      throw new Error('Owner must be authenticated. Ensure /users/sync was called first.');
+    }
+
     const listingData: any = {
       title: dto.title,
       description: dto.description,
