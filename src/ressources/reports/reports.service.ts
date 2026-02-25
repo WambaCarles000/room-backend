@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { AppDataSource } from '../../database/data-source';
 import { Report } from './report.entity';
-import { User } from '../users/user.entity';
+import { User, UserRole } from '../users/user.entity';
 import { Listing } from '../listings/listing.entity';
 import { CreateReportDto } from './dto/create-report.dto';
 
@@ -67,9 +67,14 @@ export class ReportsService {
     return await this.reportsRepository.save(report);
   }
 
-  async getReports(userId: string): Promise<Report[]> {
+  async getReports(requestingUser: User): Promise<Report[]> {
+    // If user is admin, return all reports. Otherwise only reports created by the user.
+    if (requestingUser.role === UserRole.ADMIN) {
+      return this.reportsRepository.find({ order: { created_at: 'DESC' } });
+    }
+
     return this.reportsRepository.find({
-      where: { reported_by: { id: userId } },
+      where: { reported_by: { id: requestingUser.id } },
       order: { created_at: 'DESC' },
     });
   }

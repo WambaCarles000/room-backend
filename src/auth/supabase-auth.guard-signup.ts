@@ -6,8 +6,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { User } from '../ressources/users/user.entity';
-import { AppDataSource } from '../database/data-source';
+
 
 @Injectable()
 export class SupabaseAuthGuardForSignup implements CanActivate {

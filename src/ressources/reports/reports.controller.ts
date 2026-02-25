@@ -28,6 +28,6 @@ export class ReportsController {
   @Get()
   @UseGuards(SupabaseAuthGuard)
   async getReports(@UserDecorator() user: User) {
-    return this.reportsService.getReports(user.id);
+    return this.reportsService.getReports(user);
   }
 }
