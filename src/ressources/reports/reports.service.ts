@@ -78,4 +78,57 @@ export class ReportsService {
       order: { created_at: 'DESC' },
     });
   }
+
+  async updateReportStatus(
+    reportId: string,
+    status: string,
+    admin_notes?: string,
+  ): Promise<Report> {
+    const report = await this.reportsRepository.findOne({
+      where: { id: reportId },
+    });
+    if (!report) {
+      throw new BadRequestException('Report not found');
+    }
+
+    report.status = status;
+    if (admin_notes !== undefined) {
+      report.admin_notes = admin_notes;
+    }
+
+    return await this.reportsRepository.save(report);
+  }
+
+  async suspendUser(
+    reportId: string,
+    requestingUser: User,
+  ): Promise<{ success: boolean; message: string }> {
+    const report = await this.reportsRepository.findOne({
+      where: { id: reportId },
+      relations: { reported_user: true },
+    });
+
+    if (!report) {
+      throw new BadRequestException('Report not found');
+    }
+
+    if (!report.reported_user) {
+      throw new BadRequestException('This report is about a listing, not a user');
+    }
+
+    // Suspend the user
+    const userToSuspend = report.reported_user;
+    userToSuspend.is_active = false;
+    await this.usersRepository.save(userToSuspend);
+
+    // Update report status
+    report.status = 'resolved';
+    report.admin_notes = `User ${userToSuspend.email} has been suspended by admin.`;
+    await this.reportsRepository.save(report);
+
+    return {
+      success: true,
+      message: `User ${userToSuspend.email} has been suspended.`,
+    };
+  }
 }

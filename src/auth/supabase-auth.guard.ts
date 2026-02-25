@@ -30,6 +30,7 @@ export class SupabaseAuthGuard implements CanActivate {
       const usersRepository = AppDataSource.getRepository(User);
       const dbUser = await usersRepository.findOne({ where: { supabase_id: payload.sub as string } });
       if (!dbUser) throw new UnauthorizedException('User not synced. Call /users/sync first.');
+      if (!dbUser.is_active) throw new UnauthorizedException('Your account has been suspended.');
 
       request.user = dbUser; // Entity DB attachée
       return true;
