@@ -18,6 +18,8 @@ export class SupabaseAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+    const response = context.switchToHttp().getResponse();
+
 
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) throw new UnauthorizedException('Missing token');
@@ -30,14 +32,21 @@ export class SupabaseAuthGuard implements CanActivate {
       const usersRepository = AppDataSource.getRepository(User);
       const dbUser = await usersRepository.findOne({ where: { supabase_id: payload.sub as string } });
       if (!dbUser) throw new UnauthorizedException('User not synced. Call /users/sync first.');
-      if (!dbUser.is_active) throw new UnauthorizedException('Your account has been suspended.');
-
+        if (!dbUser.is_active) {
+     
+        response.status(401).json({
+          statusCode: 401,
+          message: 'Your account has been suspended.',
+          code: 'ACCOUNT_SUSPENDED',
+        });
+        console.warn(`Suspended user ${dbUser.id} attempted to authenticate.`);
+        return false;
+      }
       request.user = dbUser; // Entity DB attachée
       return true;
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
         console.error('JWT verification error:', err.message);
-        console.error('JWKS URL:', this.jwksUrl);
       }
       throw new UnauthorizedException('Invalid or expired token');
     }

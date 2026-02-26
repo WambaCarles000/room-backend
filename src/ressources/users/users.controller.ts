@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Body, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Post, Patch, Body, UseGuards, Request, ForbiddenException, Req, Get } from '@nestjs/common';
 import { SupabaseAuthGuard } from 'src/auth/supabase-auth.guard';
 import { UsersService } from './users.service';
 import { SyncUserDto } from './dto/sync-user.dto';
@@ -8,6 +8,21 @@ import { SupabaseAuthGuardForSignup } from 'src/auth/supabase-auth.guard-signup'
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+
+
+
+  @Get('me')
+  @UseGuards(SupabaseAuthGuard)
+  getProfile(@Req() req) {
+    // req.user vient du guard
+    // console.log('GET /users/me called. Authenticated user:', req.user);
+    return {
+      id: req.user.id,
+      email: req.user.email,
+      is_active: req.user.is_active,
+    };
+  }
 
   @Post('sync')
   @UseGuards(SupabaseAuthGuardForSignup)
@@ -37,5 +52,6 @@ export class UsersController {
     }
 
     return this.usersService.updateProfile(user.id, dto);
+
   }
 }

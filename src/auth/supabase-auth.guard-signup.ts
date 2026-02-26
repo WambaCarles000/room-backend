@@ -49,7 +49,7 @@ export class SupabaseAuthGuardForSignup implements CanActivate {
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
         console.error('JWT verification error:', error.message);
-        console.error('JWKS URL:', this.jwksUrl);
+        // console.error('JWKS URL:', this.jwksUrl);
       }
       throw new UnauthorizedException('Invalid or expired token');
     }
