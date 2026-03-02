@@ -75,8 +75,13 @@ export class UsersService {
     if (dto?.phone && user.phone !== dto.phone) {
       user.phone = dto.phone; changed = true;
     }
-    // Allow role set to owner/tenant by user, but not admin
-    if (dto?.role && dto.role !== 'admin' && user.role !== dto.role) {
+    // Allow role set to owner/tenant by user, but not admin. Never downgrade an existing admin.
+    if (
+      dto?.role &&
+      dto.role !== 'admin' &&
+      user.role !== UserRole.ADMIN &&
+      user.role !== dto.role
+    ) {
       user.role = dto.role as UserRole; changed = true;
     }
 
@@ -98,8 +103,17 @@ export class UsersService {
     if (dto.first_name) user.first_name = dto.first_name;
     if (dto.last_name) user.last_name = dto.last_name;
     if (dto.phone) user.phone = dto.phone;
-    // role changes should be validated by caller
-    if (dto.role && dto.role !== user.role) user.role = dto.role;
+    if (dto.email && dto.email !== user.email) {
+      user.email = dto.email;
+    }
+    // role changes should be validated by caller; never allow changing an admin via this endpoint
+    if (
+      dto.role &&
+      dto.role !== user.role &&
+      user.role !== UserRole.ADMIN
+    ) {
+      user.role = dto.role as UserRole;
+    }
 
     return this.repo.save(user);
   }

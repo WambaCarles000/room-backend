@@ -16,11 +16,15 @@ export class UsersController {
   @UseGuards(SupabaseAuthGuard)
   getProfile(@Req() req) {
     // req.user vient du guard
-    // console.log('GET /users/me called. Authenticated user:', req.user);
+    console.log('GET /users/me called. Authenticated user:', req.user);
     return {
       id: req.user.id,
       email: req.user.email,
+      first_name: req.user.first_name || null,
+      last_name: req.user.last_name || null,
+      phone: req.user.phone || null,
       is_active: req.user.is_active,
+      role: req.user.role,
     };
   }
 
