@@ -5,6 +5,7 @@ import { CreateListingDto } from './dto/create-listing.dto';
 import { UsersService } from '../users/users.service';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
+import { Report } from '../reports/report.entity';
 
 @Injectable()
 export class ListingsService {
@@ -13,9 +14,102 @@ export class ListingsService {
   constructor(private readonly usersService: UsersService) {}
 
   async findAll() {
-    return this.repo.find({
+    // Récupération des listings avec propriétaire et images
+    const listings = await this.repo.find({
       order: { created_at: 'DESC' },
       relations: ['images', 'owner'],
+    });
+
+    // Extraire les IDs uniques des propriétaires
+    const ownerIds = Array.from(
+      new Set(
+        listings
+          .map((l) => l.owner?.id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (!ownerIds.length) {
+      return listings;
+    }
+
+    const reportsRepo = AppDataSource.getRepository(Report);
+
+    // Compter le nombre total d'annonces par propriétaire
+    const totalListingsRaw = await this.repo
+      .createQueryBuilder('listing')
+      .select('listing.ownerId', 'ownerId')
+      .addSelect('COUNT(*)', 'total')
+      .where('listing.ownerId IN (:...ownerIds)', { ownerIds })
+      .groupBy('listing.ownerId')
+      .getRawMany();
+
+    // Compter le nombre d'annonces louées par propriétaire
+    const rentedListingsRaw = await this.repo
+      .createQueryBuilder('listing')
+      .select('listing.ownerId', 'ownerId')
+      .addSelect('COUNT(*)', 'total')
+      .where('listing.ownerId IN (:...ownerIds)', { ownerIds })
+      .andWhere('listing.status = :status', { status: ListingStatus.RENTED })
+      .groupBy('listing.ownerId')
+      .getRawMany();
+
+    // Compter le nombre d'annonces réservées par propriétaire
+    const takenListingsRaw = await this.repo
+      .createQueryBuilder('listing')
+      .select('listing.ownerId', 'ownerId')
+      .addSelect('COUNT(*)', 'total')
+      .where('listing.ownerId IN (:...ownerIds)', { ownerIds })
+      .andWhere('listing.status = :status', { status: ListingStatus.TAKEN })
+      .groupBy('listing.ownerId')
+      .getRawMany();
+
+    // Compter le nombre d'annonces vendues par propriétaire
+    const soldListingsRaw = await this.repo
+      .createQueryBuilder('listing')
+      .select('listing.ownerId', 'ownerId')
+      .addSelect('COUNT(*)', 'total')
+      .where('listing.ownerId IN (:...ownerIds)', { ownerIds })
+      .andWhere('listing.status = :status', { status: ListingStatus.SOLD })
+      .groupBy('listing.ownerId')
+      .getRawMany();
+
+    // Compter le nombre de signalements par propriétaire (en tant qu'utilisateur signalé)
+    const reportsRaw = await reportsRepo
+      .createQueryBuilder('report')
+      .select('report.reported_user_id', 'userId')
+      .addSelect('COUNT(*)', 'total')
+      .where('report.reported_user_id IN (:...ownerIds)', { ownerIds })
+      .groupBy('report.reported_user_id')
+      .getRawMany();
+
+    const totalListingsMap = new Map<string, number>(
+      totalListingsRaw.map((r: any) => [r.ownerId, Number(r.total)]),
+    );
+    const rentedListingsMap = new Map<string, number>(
+      rentedListingsRaw.map((r: any) => [r.ownerId, Number(r.total)]),
+    );
+    const takenListingsMap = new Map<string, number>(
+      takenListingsRaw.map((r: any) => [r.ownerId, Number(r.total)]),
+    );
+    const soldListingsMap = new Map<string, number>(
+      soldListingsRaw.map((r: any) => [r.ownerId, Number(r.total)]),
+    );
+    const reportsMap = new Map<string, number>(
+      reportsRaw.map((r: any) => [r.userId, Number(r.total)]),
+    );
+
+    // Enrichir les objets owner renvoyés avec les compteurs de fiabilité
+    return listings.map((listing) => {
+      const anyOwner = listing.owner as any;
+      if (anyOwner?.id) {
+        anyOwner.total_listings = totalListingsMap.get(anyOwner.id) ?? 0;
+        anyOwner.rented_listings = rentedListingsMap.get(anyOwner.id) ?? 0;
+        anyOwner.taken_listings = takenListingsMap.get(anyOwner.id) ?? 0;
+        anyOwner.sold_listings = soldListingsMap.get(anyOwner.id) ?? 0;
+        anyOwner.reports_count = reportsMap.get(anyOwner.id) ?? 0;
+      }
+      return listing;
     });
   }
 
