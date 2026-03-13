@@ -6,10 +6,12 @@ import { UsersService } from '../users/users.service';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { Report } from '../reports/report.entity';
+import { ListingImage } from '../listing-images/listing-image.entity';
 
 @Injectable()
 export class ListingsService {
   private readonly repo = AppDataSource.getRepository(Listing);
+  private readonly imageRepo = AppDataSource.getRepository(ListingImage);
 
   constructor(private readonly usersService: UsersService) {}
 
@@ -189,6 +191,38 @@ export class ListingsService {
 
     listing.updated_at = new Date();
     return this.repo.save(listing);
+  }
+
+  async addImages(listingId: string, imageUrls: string[], user: any) {
+    const listing = await this.repo.findOne({ where: { id: listingId } });
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    // Autorisation: uniquement le propriétaire ou admin
+    if (listing.ownerId !== user.id && user.role !== 'admin') {
+      throw new ForbiddenException('Not allowed to modify this listing');
+    }
+
+    if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
+      return [];
+    }
+
+    // Limiter le nombre d'images par annonce (ex: 10 max)
+    const existingCount = await this.imageRepo.count({ where: { listing: { id: listingId } } });
+    const availableSlots = Math.max(10 - existingCount, 0);
+    const urlsToSave = imageUrls.slice(0, availableSlots);
+
+    const images = urlsToSave.map((url, index) => {
+      const img = new ListingImage();
+      img.imageUrl = url;
+      img.listing = listing;
+      img.order = existingCount + index;
+      img.is_active = true;
+      return img;
+    });
+
+    return this.imageRepo.save(images);
   }
 
   async findUserListings(userId: string) {

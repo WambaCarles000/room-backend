@@ -32,6 +32,16 @@ export class ListingsController {
     return this.listingsService.create(dto, user);
   }
 
+  @Post(':id/images')
+  @UseGuards(SupabaseAuthGuard)
+  async addImages(
+    @Param('id') id: string,
+    @Body('images') images: string[],
+    @User() user: any,
+  ) {
+    return this.listingsService.addImages(id, images, user);
+  }
+
   @Patch(':id/status')
   @UseGuards(SupabaseAuthGuard)
   async updateStatus(
