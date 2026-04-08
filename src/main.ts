@@ -17,7 +17,7 @@ async function bootstrap() {
       'http://localhost:3001',
       'https://room-frontend-nu.vercel.app',
     ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'],
     // credentials: true, ONLY WHEN YOU NEED TO SEND COOKIES
   });
 
