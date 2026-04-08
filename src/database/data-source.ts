@@ -8,13 +8,27 @@ import { ContactRequest } from '../ressources/contact-requests/contact-request.e
 import { Report } from '../ressources/reports/report.entity';
 import path from 'path';
 
+const databaseUrl = process.env.DATABASE_URL;
+const shouldUseSsl =
+  process.env.DB_SSL === 'true' ||
+  (databaseUrl?.includes('supabase.co') ?? false) ||
+  process.env.NODE_ENV === 'production';
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT || '5432'),
-  username: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
+  ...(databaseUrl
+    ? {
+        url: databaseUrl,
+        ssl: shouldUseSsl ? { rejectUnauthorized: false } : undefined,
+      }
+    : {
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || '5432', 10),
+        username: process.env.DB_USERNAME,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        ssl: shouldUseSsl ? { rejectUnauthorized: false } : undefined,
+      }),
   // Liste explicite des entités (plus fiable que le glob pattern)
   entities: [
     User,
