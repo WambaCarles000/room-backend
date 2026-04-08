@@ -1,4 +1,9 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { AppDataSource } from '../../database/data-source';
 import { Listing, ListingStatus, ListingType } from './listing.entity';
 import { CreateListingDto } from './dto/create-listing.dto';
@@ -120,6 +125,12 @@ export class ListingsService {
     if (!owner?.id) {
       throw new Error('Owner must be authenticated. Ensure /users/sync was called first.');
     }
+    // Phone is required at publish time (not at signup)
+    if (!owner?.phone) {
+      throw new BadRequestException(
+        'Veuillez ajouter votre numéro de téléphone dans votre profil avant de publier une annonce.',
+      );
+    }
 
     const listingData: any = {
       title: dto.title,
@@ -225,6 +236,8 @@ export class ListingsService {
     return this.imageRepo.save(images);
   }
 
+
+  
   async findUserListings(userId: string) {
     return this.repo.find({
       where: { owner: { id: userId } },
