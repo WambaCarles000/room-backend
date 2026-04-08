@@ -11,12 +11,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // CORS pour permettre les appels depuis le frontend(100 % permissif)
-  app.enableCors();
-  // app.enableCors({
-  //   origin: 'http://localhost:5173', //url du frontend
-  //   methods: 'GET,POST,PUT,DELETE',
-  //   credentials: true,
-  // });
+  // app.enableCors();
+  app.enableCors({
+    origin: [
+      'http://localhost:3001',
+      'https://room-frontend-nu.vercel.app',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    // credentials: true, ONLY WHEN YOU NEED TO SEND COOKIES
+  });
 
   // Swagger / OpenAPI
   const config = new DocumentBuilder()
