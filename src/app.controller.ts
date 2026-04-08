@@ -13,7 +13,7 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  // Exemple d'endpoint protégé par Supabase
+
   @Get('me')
   @UseGuards(SupabaseAuthGuard)
   getMe(@User() user: any) {

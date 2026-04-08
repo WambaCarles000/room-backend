@@ -1,5 +1,4 @@
-import { Entity, Column, OneToMany } from 'typeorm';
-import { GenericEntity } from '../../common/generic.entity';
+import { Entity, Column, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Listing } from '../listings/listing.entity';
 import { Favorite } from '../listing-images/favorites/favorite.entity';
 import { ContactRequest } from '../contact-requests/contact-request.entity';
@@ -11,12 +10,33 @@ export enum UserRole {
 }
 
 @Entity()
-export class User extends GenericEntity {
+export class User {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column({ type: 'timestamp', default: () => 'NOW()' })
+  created_at: Date;
+
+  @Column({ type: 'timestamp', default: () => 'NOW()', nullable: true })
+  updated_at: Date;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at: Date;
+
+  @Column({ default: false })
+  is_active: boolean;
+
   @Column({ unique: true })
-  supabase_id: string; // ID de l'utilisateur dans Supabase Auth (sub du JWT)
+  supabase_id: string;
 
   @Column({ nullable: true })
-  email: string; // Email  Supabase
+  email: string;
+
+  @Column({ nullable: true })
+  first_name: string;
+
+  @Column({ nullable: true })
+  last_name: string;
 
   @Column({ type: 'enum', enum: UserRole, default: UserRole.TENANT })
   role: UserRole;

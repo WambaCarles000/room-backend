@@ -5,6 +5,9 @@ export class CreateListingDto {
   currency?: string;
   city: string;
   district: string;
-  type: string; // ListingType côté entity; on garde string pour rester simple via le body JSON.
+  type: string;
+  square_meters?: number;
+  deposit_months?: number;
+  availability_date?: Date;
 }
 

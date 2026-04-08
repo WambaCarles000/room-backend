@@ -5,6 +5,7 @@ import { Listing } from '../ressources/listings/listing.entity';
 import { ListingImage } from '../ressources/listing-images/listing-image.entity';
 import { Favorite } from '../ressources/listing-images/favorites/favorite.entity';
 import { ContactRequest } from '../ressources/contact-requests/contact-request.entity';
+import { Report } from '../ressources/reports/report.entity';
 import path from 'path';
 
 export const AppDataSource = new DataSource({
@@ -21,12 +22,13 @@ export const AppDataSource = new DataSource({
     ListingImage,
     Favorite,
     ContactRequest,
+    Report,
   ],
 
   // Scan automatique de toutes les migrations
   migrations: [
     path.join(__dirname, '/../database/migrations/*{.ts,.js}')
   ],
-  synchronize: process.env.NODE_ENV === 'development' ? true : false,
+  synchronize: false, // Désactivation de la synchronisation automatique
   logging: process.env.NODE_ENV === 'development',
 });
