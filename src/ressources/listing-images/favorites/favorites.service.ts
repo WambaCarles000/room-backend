@@ -62,6 +62,15 @@ export class FavoritesService {
     });
   }
 
+  async getUserFavoriteIds(userId: string): Promise<string[]> {
+    const rows = await this.repo.find({
+      where: { userId },
+      select: { listingId: true },
+      order: { created_at: 'DESC' },
+    });
+    return rows.map((r) => r.listingId).filter(Boolean);
+  }
+
   async getListingFavorites(listingId: string): Promise<number> {
     return this.repo.count({
       where: { listingId },

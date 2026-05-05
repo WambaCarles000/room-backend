@@ -32,6 +32,12 @@ export class FavoritesController {
     return this.favoritesService.getUserFavorites(req.user.id);
   }
 
+  @Get('ids')
+  @UseGuards(SupabaseAuthGuard)
+  async getUserFavoriteIds(@Request() req: any) {
+    return this.favoritesService.getUserFavoriteIds(req.user.id);
+  }
+
   @Get('check/:listingId')
   @UseGuards(SupabaseAuthGuard)
   async checkFavorite(@Param('listingId') listingId: string, @Request() req: any) {
