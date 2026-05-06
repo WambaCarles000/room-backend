@@ -13,7 +13,7 @@ export class FavoritesService {
   async addFavorite(userId: string, listingId: string): Promise<Favorite> {
     // Vérifier que l'utilisateur existe
     const user = await this.userRepo.findOne({ where: { id: userId } });
-    console.log('Utilisateur trouvé:', user);
+    // console.log('Utilisateur trouvé:', user);
     if (!user) {
       throw new NotFoundException('Utilisateur non trouvé');
     }
