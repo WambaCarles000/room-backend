@@ -42,6 +42,18 @@ export class ListingsController {
     return this.listingsService.addImages(id, images, user);
   }
 
+  @Patch(':id/archive')
+  @UseGuards(SupabaseAuthGuard)
+  async archiveListing(@Param('id') id: string, @User() user: any) {
+    return this.listingsService.setArchived(id, user, true);
+  }
+
+  @Patch(':id/unarchive')
+  @UseGuards(SupabaseAuthGuard)
+  async unarchiveListing(@Param('id') id: string, @User() user: any) {
+    return this.listingsService.setArchived(id, user, false);
+  }
+
   @Patch(':id/status')
   @UseGuards(SupabaseAuthGuard)
   async updateStatus(

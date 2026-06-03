@@ -1,5 +1,18 @@
 # Configuration Supabase - Guide
 
+## Migrations logements (`archived_at` + `is_active`)
+
+Après mise à jour du backend, exécuter dans `room-backend` :
+
+```bash
+yarn migration:run
+```
+
+- `archived_at` : archivage manuel par le propriétaire
+- `is_active` : visibilité catalogue (`true` = visible, `false` = vendu ou archivé)
+
+---
+
 ## Où trouver les identifiants Supabase ?
 
 ### 1. Dans le Dashboard Supabase (en ligne)

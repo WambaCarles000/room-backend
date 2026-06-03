@@ -39,6 +39,9 @@ export class Listing {
   @Column({ type: 'timestamp', nullable: true })
   deleted_at: Date;
 
+  @Column({ type: 'timestamp', nullable: true })
+  archived_at: Date | null;
+
   @Column({ default: false })
   is_active: boolean;
 

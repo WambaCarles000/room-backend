@@ -13,6 +13,19 @@ import { UpdateListingDto } from './dto/update-listing.dto';
 import { Report } from '../reports/report.entity';
 import { ListingImage } from '../listing-images/listing-image.entity';
 
+/** Règle unique de visibilité publique (catalogue) */
+function applyListingVisibility(listing: Listing): void {
+  if (listing.status === ListingStatus.SOLD) {
+    listing.is_active = false;
+    return;
+  }
+  if (listing.archived_at) {
+    listing.is_active = false;
+    return;
+  }
+  listing.is_active = true;
+}
+
 @Injectable()
 export class ListingsService {
   private readonly repo = AppDataSource.getRepository(Listing);
@@ -20,14 +33,20 @@ export class ListingsService {
 
   constructor(private readonly usersService: UsersService) {}
 
+  /**
+   * Catalogue public : uniquement is_active = true.
+   * Les vendus et archivés sont masqués automatiquement (is_active = false).
+   */
   async findAll() {
-    // Récupération des listings avec propriétaire et images
-    const listings = await this.repo.find({
-      order: { created_at: 'DESC' },
-      relations: ['images', 'owner'],
-    });
+    const qb = this.repo
+      .createQueryBuilder('listing')
+      .leftJoinAndSelect('listing.images', 'images')
+      .leftJoinAndSelect('listing.owner', 'owner')
+      .where('listing.is_active = :active', { active: true })
+      .orderBy('listing.created_at', 'DESC');
 
-    // Extraire les IDs uniques des propriétaires
+    const listings = await qb.getMany();
+
     const ownerIds = Array.from(
       new Set(
         listings
@@ -42,16 +61,15 @@ export class ListingsService {
 
     const reportsRepo = AppDataSource.getRepository(Report);
 
-    // Compter le nombre total d'annonces par propriétaire
     const totalListingsRaw = await this.repo
       .createQueryBuilder('listing')
       .select('listing.ownerId', 'ownerId')
       .addSelect('COUNT(*)', 'total')
       .where('listing.ownerId IN (:...ownerIds)', { ownerIds })
+      .andWhere('listing.is_active = :active', { active: true })
       .groupBy('listing.ownerId')
       .getRawMany();
 
-    // Compter le nombre d'annonces louées par propriétaire
     const rentedListingsRaw = await this.repo
       .createQueryBuilder('listing')
       .select('listing.ownerId', 'ownerId')
@@ -61,7 +79,6 @@ export class ListingsService {
       .groupBy('listing.ownerId')
       .getRawMany();
 
-    // Compter le nombre d'annonces réservées par propriétaire
     const takenListingsRaw = await this.repo
       .createQueryBuilder('listing')
       .select('listing.ownerId', 'ownerId')
@@ -71,7 +88,6 @@ export class ListingsService {
       .groupBy('listing.ownerId')
       .getRawMany();
 
-    // Compter le nombre d'annonces vendues par propriétaire
     const soldListingsRaw = await this.repo
       .createQueryBuilder('listing')
       .select('listing.ownerId', 'ownerId')
@@ -81,7 +97,6 @@ export class ListingsService {
       .groupBy('listing.ownerId')
       .getRawMany();
 
-    // Compter le nombre de signalements par propriétaire (en tant qu'utilisateur signalé)
     const reportsRaw = await reportsRepo
       .createQueryBuilder('report')
       .select('report.reported_user_id', 'userId')
@@ -106,7 +121,6 @@ export class ListingsService {
       reportsRaw.map((r: any) => [r.userId, Number(r.total)]),
     );
 
-    // Enrichir les objets owner renvoyés avec les compteurs de fiabilité
     return listings.map((listing) => {
       const anyOwner = listing.owner as any;
       if (anyOwner?.id) {
@@ -121,11 +135,9 @@ export class ListingsService {
   }
 
   async create(dto: CreateListingDto, owner: any) {
-    // 'owner' is already a User object from the database (passed by SupabaseAuthGuard via @User() decorator)
     if (!owner?.id) {
       throw new Error('Owner must be authenticated. Ensure /users/sync was called first.');
     }
-    // Phone is required at publish time (not at signup)
     if (!owner?.phone) {
       throw new BadRequestException(
         'Veuillez ajouter votre numéro de téléphone dans votre profil avant de publier une annonce.',
@@ -141,6 +153,8 @@ export class ListingsService {
       district: dto.district,
       type: dto.type as ListingType,
       status: ListingStatus.AVAILABLE,
+      is_active: true,
+      archived_at: null,
       owner: owner,
     };
 
@@ -164,8 +178,6 @@ export class ListingsService {
     const listing = await this.repo.findOne({ where: { id } });
     if (!listing) throw new NotFoundException('Listing not found');
 
-    // 'user' is already a User object from the database (passed by SupabaseAuthGuard via @User() decorator)
-    // Autorisation: uniquement le propriétaire ou admin
     if (listing.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('Not allowed to modify this listing');
     }
@@ -173,6 +185,8 @@ export class ListingsService {
     if (dto.status) listing.status = dto.status as ListingStatus;
     if (dto.availability_date) listing.availability_date = dto.availability_date;
 
+    applyListingVisibility(listing);
+    listing.updated_at = new Date();
     return this.repo.save(listing);
   }
 
@@ -180,13 +194,10 @@ export class ListingsService {
     const listing = await this.repo.findOne({ where: { id } });
     if (!listing) throw new NotFoundException('Listing not found');
 
-    // 'user' is already a User object from the database (passed by SupabaseAuthGuard via @User() decorator)
-    // Autorisation: uniquement le propriétaire ou admin
     if (listing.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('Not allowed to modify this listing');
     }
 
-    // Mettre à jour tous les champs fournis
     if (dto.title !== undefined) listing.title = dto.title;
     if (dto.description !== undefined) listing.description = dto.description;
     if (dto.price !== undefined) listing.price = dto.price.toString();
@@ -200,6 +211,7 @@ export class ListingsService {
     if (dto.status !== undefined) listing.status = dto.status as ListingStatus;
     if (dto.availability_date !== undefined) listing.availability_date = dto.availability_date;
 
+    applyListingVisibility(listing);
     listing.updated_at = new Date();
     return this.repo.save(listing);
   }
@@ -210,7 +222,6 @@ export class ListingsService {
       throw new NotFoundException('Listing not found');
     }
 
-    // Autorisation: uniquement le propriétaire ou admin
     if (listing.ownerId !== user.id && user.role !== 'admin') {
       throw new ForbiddenException('Not allowed to modify this listing');
     }
@@ -219,7 +230,6 @@ export class ListingsService {
       return [];
     }
 
-    // Limiter le nombre d'images par annonce (ex: 10 max)
     const existingCount = await this.imageRepo.count({ where: { listing: { id: listingId } } });
     const availableSlots = Math.max(10 - existingCount, 0);
     const urlsToSave = imageUrls.slice(0, availableSlots);
@@ -236,8 +246,7 @@ export class ListingsService {
     return this.imageRepo.save(images);
   }
 
-
-  
+  /** Tous les logements du propriétaire (actifs, vendus, archivés). */
   async findUserListings(userId: string) {
     return this.repo.find({
       where: { owner: { id: userId } },
@@ -245,5 +254,33 @@ export class ListingsService {
       relations: ['images'],
     });
   }
-}
 
+  /**
+   * Archivage manuel : réservé au propriétaire de l'annonce ou à l'admin.
+   * Masque l'annonce du catalogue (is_active = false) sans la supprimer.
+   */
+  async setArchived(id: string, user: any, archived: boolean) {
+    const listing = await this.repo.findOne({ where: { id } });
+    if (!listing) throw new NotFoundException('Listing not found');
+
+    if (listing.ownerId !== user.id && user.role !== 'admin') {
+      throw new ForbiddenException('Not allowed to modify this listing');
+    }
+
+    if (archived) {
+      listing.archived_at = new Date();
+      listing.is_active = false;
+    } else {
+      if (listing.status === ListingStatus.SOLD) {
+        throw new BadRequestException(
+          'Une annonce vendue ne peut pas être réactivée. Changez d\'abord le statut (ex: disponible).',
+        );
+      }
+      listing.archived_at = null;
+      listing.is_active = true;
+    }
+
+    listing.updated_at = new Date();
+    return this.repo.save(listing);
+  }
+}
