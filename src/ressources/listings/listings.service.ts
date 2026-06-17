@@ -246,6 +246,40 @@ export class ListingsService {
     return this.imageRepo.save(images);
   }
 
+  /**
+   * Remplace l'ensemble des images d'un logement (ordre inclus).
+   * Note: ne supprime pas les fichiers du storage, seulement les enregistrements DB.
+   */
+  async replaceImages(listingId: string, imageUrls: string[], user: any) {
+    const listing = await this.repo.findOne({ where: { id: listingId } });
+    if (!listing) {
+      throw new NotFoundException('Listing not found');
+    }
+
+    if (listing.ownerId !== user.id && user.role !== 'admin') {
+      throw new ForbiddenException('Not allowed to modify this listing');
+    }
+
+    const urls = Array.isArray(imageUrls) ? imageUrls.filter(Boolean).slice(0, 10) : [];
+
+    await this.imageRepo.delete({ listingId });
+
+    if (!urls.length) {
+      return [];
+    }
+
+    const images = urls.map((url, index) => {
+      const img = new ListingImage();
+      img.imageUrl = url;
+      img.listing = listing;
+      img.order = index;
+      img.is_active = true;
+      return img;
+    });
+
+    return this.imageRepo.save(images);
+  }
+
   /** Tous les logements du propriétaire (actifs, vendus, archivés). */
   async findUserListings(userId: string) {
     return this.repo.find({

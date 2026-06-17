@@ -42,6 +42,16 @@ export class ListingsController {
     return this.listingsService.addImages(id, images, user);
   }
 
+  @Patch(':id/images')
+  @UseGuards(SupabaseAuthGuard)
+  async replaceImages(
+    @Param('id') id: string,
+    @Body('images') images: string[],
+    @User() user: any,
+  ) {
+    return this.listingsService.replaceImages(id, images, user);
+  }
+
   @Patch(':id/archive')
   @UseGuards(SupabaseAuthGuard)
   async archiveListing(@Param('id') id: string, @User() user: any) {
