@@ -10,15 +10,33 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
 
-  // CORS pour permettre les appels depuis le frontend(100 % permissif)
-  // app.enableCors();
   app.enableCors({
-    origin: [
-      'http://localhost:3001',
-      'https://room-frontend-nu.vercel.app',
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH'],
-    // credentials: true, ONLY WHEN YOU NEED TO SEND COOKIES
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const allowed = [
+        'http://localhost:3001',
+        'http://127.0.0.1:3001',
+        'https://room-frontend-nu.vercel.app',
+        process.env.FRONTEND_URL,
+      ].filter(Boolean);
+
+      const isPrivateLan =
+        /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+):\d+$/.test(
+          origin,
+        );
+
+      if (allowed.includes(origin) || isPrivateLan) {
+        callback(null, true);
+        return;
+      }
+
+      callback(null, false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // Swagger / OpenAPI
@@ -33,7 +51,8 @@ async function bootstrap() {
   SwaggerModule.setup('api', app, document);
 
   const port = process.env.PORT ?? 3000;
-  await app.listen(port);
+  //pour que le serveur soit accessible depuis l'extérieur
+  await app.listen(port, '0.0.0.0');
 }
 
 bootstrap();

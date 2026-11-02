@@ -21,6 +21,7 @@ export class UsersController {
       email: user.email,
       first_name: user.first_name || null,
       last_name: user.last_name || null,
+      avatar_url: user.avatar_url || null,
       phone: user.phone || null,
       is_active: user.is_active,
       role: user.role,

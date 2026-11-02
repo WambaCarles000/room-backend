@@ -102,6 +102,7 @@ export class UsersService {
 
     if (dto.first_name) user.first_name = dto.first_name;
     if (dto.last_name) user.last_name = dto.last_name;
+    if (dto.avatar_url !== undefined) user.avatar_url = dto.avatar_url;
     if (dto.phone) user.phone = dto.phone;
     if (dto.email && dto.email !== user.email) {
       user.email = dto.email;
