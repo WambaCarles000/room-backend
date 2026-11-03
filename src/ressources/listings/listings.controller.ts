@@ -7,6 +7,7 @@ import { SupabaseAuthGuard } from '../../auth/supabase-auth.guard';
 import { User } from '../../auth/user.decorator';
 import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
+import { ListingImageInput } from '../listing-images/listing-image.dto';
 
 @Controller('listings')
 export class ListingsController {
@@ -36,7 +37,7 @@ export class ListingsController {
   @UseGuards(SupabaseAuthGuard)
   async addImages(
     @Param('id') id: string,
-    @Body('images') images: string[],
+    @Body('images') images: Array<string | ListingImageInput>,
     @User() user: any,
   ) {
     return this.listingsService.addImages(id, images, user);
@@ -46,7 +47,7 @@ export class ListingsController {
   @UseGuards(SupabaseAuthGuard)
   async replaceImages(
     @Param('id') id: string,
-    @Body('images') images: string[],
+    @Body('images') images: Array<string | ListingImageInput>,
     @User() user: any,
   ) {
     return this.listingsService.replaceImages(id, images, user);

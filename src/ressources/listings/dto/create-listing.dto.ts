@@ -9,5 +9,6 @@ export class CreateListingDto {
   square_meters?: number;
   deposit_months?: number;
   availability_date?: Date;
+  spaces?: Record<string, 'private' | 'shared'>;
 }
 

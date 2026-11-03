@@ -9,4 +9,5 @@ export class UpdateListingDto {
   deposit_months?: number;
   status?: 'available' | 'sold' | 'rented' | 'taken';
   availability_date?: Date;
+  spaces?: Record<string, 'private' | 'shared'>;
 }

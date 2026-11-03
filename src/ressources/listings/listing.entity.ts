@@ -85,6 +85,9 @@ export class Listing {
   @Column({ type: 'timestamp', nullable: true })
   availability_date: Date;
 
+  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  spaces: Record<string, 'private' | 'shared'>;
+
   @Column({ type: 'uuid', nullable: true })
   ownerId: string;
 

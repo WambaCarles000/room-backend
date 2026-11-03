@@ -21,6 +21,9 @@ export class ListingImage {
   @Column()
   imageUrl: string;
 
+  @Column({ type: 'varchar', default: 'general' })
+  room: string;
+
   @Column({ type: 'int', default: 0 })
   order: number;
 

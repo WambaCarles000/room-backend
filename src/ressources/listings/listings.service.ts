@@ -12,6 +12,29 @@ import { UpdateListingStatusDto } from './dto/update-listing-status.dto';
 import { UpdateListingDto } from './dto/update-listing.dto';
 import { Report } from '../reports/report.entity';
 import { ListingImage } from '../listing-images/listing-image.entity';
+import { ListingImageInput } from '../listing-images/listing-image.dto';
+
+const LISTING_IMAGE_ROOMS = new Set([
+  'general',
+  'living_room',
+  'kitchen',
+  'bedroom',
+  'bathroom',
+  'terrace',
+  'balcony',
+  'exterior',
+  'other',
+]);
+
+function normalizeListingImage(input: string | ListingImageInput) {
+  const image = typeof input === 'string' ? { imageUrl: input } : input;
+  if (!image?.imageUrl || typeof image.imageUrl !== 'string') return null;
+
+  return {
+    imageUrl: image.imageUrl,
+    room: LISTING_IMAGE_ROOMS.has(image.room || '') ? image.room! : 'general',
+  };
+}
 
 /** Règle unique de visibilité publique (catalogue) */
 function applyListingVisibility(listing: Listing): void {
@@ -24,6 +47,27 @@ function applyListingVisibility(listing: Listing): void {
     return;
   }
   listing.is_active = true;
+}
+
+const LISTING_SPACE_KEYS = new Set(['kitchen', 'living_room', 'shower', 'terrace']);
+
+function normalizeListingSpaces(spaces: unknown): Record<string, 'private' | 'shared'> {
+  if (spaces == null) return {};
+  if (typeof spaces !== 'object' || Array.isArray(spaces)) {
+    throw new BadRequestException('Les espaces du logement sont invalides.');
+  }
+
+  const normalized: Record<string, 'private' | 'shared'> = {};
+  for (const [space, access] of Object.entries(spaces)) {
+    if (
+      !LISTING_SPACE_KEYS.has(space) ||
+      (access !== 'private' && access !== 'shared')
+    ) {
+      throw new BadRequestException('Les espaces du logement sont invalides.');
+    }
+    normalized[space] = access;
+  }
+  return normalized;
 }
 
 @Injectable()
@@ -156,6 +200,7 @@ export class ListingsService {
       is_active: true,
       archived_at: null,
       owner: owner,
+      spaces: normalizeListingSpaces(dto.spaces),
     };
 
     if (dto.square_meters) {
@@ -210,13 +255,18 @@ export class ListingsService {
     if (dto.deposit_months !== undefined) listing.deposit_months = dto.deposit_months;
     if (dto.status !== undefined) listing.status = dto.status as ListingStatus;
     if (dto.availability_date !== undefined) listing.availability_date = dto.availability_date;
+    if (dto.spaces !== undefined) listing.spaces = normalizeListingSpaces(dto.spaces);
 
     applyListingVisibility(listing);
     listing.updated_at = new Date();
     return this.repo.save(listing);
   }
 
-  async addImages(listingId: string, imageUrls: string[], user: any) {
+  async addImages(
+    listingId: string,
+    imageInputs: Array<string | ListingImageInput>,
+    user: any,
+  ) {
     const listing = await this.repo.findOne({ where: { id: listingId } });
     if (!listing) {
       throw new NotFoundException('Listing not found');
@@ -226,17 +276,21 @@ export class ListingsService {
       throw new ForbiddenException('Not allowed to modify this listing');
     }
 
-    if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
+    if (!Array.isArray(imageInputs) || imageInputs.length === 0) {
       return [];
     }
 
     const existingCount = await this.imageRepo.count({ where: { listing: { id: listingId } } });
     const availableSlots = Math.max(10 - existingCount, 0);
-    const urlsToSave = imageUrls.slice(0, availableSlots);
+    const imagesToSave = imageInputs
+      .map(normalizeListingImage)
+      .filter((image): image is NonNullable<typeof image> => Boolean(image))
+      .slice(0, availableSlots);
 
-    const images = urlsToSave.map((url, index) => {
+    const images = imagesToSave.map((image, index) => {
       const img = new ListingImage();
-      img.imageUrl = url;
+      img.imageUrl = image.imageUrl;
+      img.room = image.room;
       img.listing = listing;
       img.order = existingCount + index;
       img.is_active = true;
@@ -250,7 +304,11 @@ export class ListingsService {
    * Remplace l'ensemble des images d'un logement (ordre inclus).
    * Note: ne supprime pas les fichiers du storage, seulement les enregistrements DB.
    */
-  async replaceImages(listingId: string, imageUrls: string[], user: any) {
+  async replaceImages(
+    listingId: string,
+    imageInputs: Array<string | ListingImageInput>,
+    user: any,
+  ) {
     const listing = await this.repo.findOne({ where: { id: listingId } });
     if (!listing) {
       throw new NotFoundException('Listing not found');
@@ -260,17 +318,23 @@ export class ListingsService {
       throw new ForbiddenException('Not allowed to modify this listing');
     }
 
-    const urls = Array.isArray(imageUrls) ? imageUrls.filter(Boolean).slice(0, 10) : [];
+    const imagesToSave = Array.isArray(imageInputs)
+      ? imageInputs
+          .map(normalizeListingImage)
+          .filter((image): image is NonNullable<typeof image> => Boolean(image))
+          .slice(0, 10)
+      : [];
 
     await this.imageRepo.delete({ listingId });
 
-    if (!urls.length) {
+    if (!imagesToSave.length) {
       return [];
     }
 
-    const images = urls.map((url, index) => {
+    const images = imagesToSave.map((image, index) => {
       const img = new ListingImage();
-      img.imageUrl = url;
+      img.imageUrl = image.imageUrl;
+      img.room = image.room;
       img.listing = listing;
       img.order = index;
       img.is_active = true;
